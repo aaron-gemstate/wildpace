@@ -18,9 +18,9 @@ export function GeneratingPlanScreen() {
       <GrainOverlay />
       <View style={styles.content}>
         <ActivityIndicator size="large" color={colors.text} style={styles.spinner} />
-        <Text style={styles.title}>Building your plan</Text>
+        <Text style={styles.title}>Building Your Plan</Text>
         <Text style={styles.subtitle}>
-          We’re generating your 4-month training plan and daily nutrition guidance. This usually takes a few seconds.
+          We’re generating your 4-month training plan and daily nutrition guidance. Your plan will appear in the Today tab and in Plan by day. This usually takes a few seconds.
         </Text>
       </View>
     </SafeAreaView>

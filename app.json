@@ -11,7 +11,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#1E1E1E"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": ["assets/**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.wildpace.app"

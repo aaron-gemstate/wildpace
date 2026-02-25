@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "expo/AppEntry.js",
   "scripts": {
+    "postinstall": "patch-package",
     "start": "expo start",
     "dev": "expo start --web",
     "android": "expo start --android",
@@ -20,7 +21,7 @@
     "@react-navigation/native": "^6.1.18",
     "@react-navigation/native-stack": "^6.9.26",
     "expo": "~54.0.0",
-    "expo-asset": "~11.0.0",
+    "expo-asset": "~12.0.12",
     "expo-font": "^14.0.11",
     "expo-splash-screen": "^31.0.13",
     "expo-status-bar": "~2.0.0",
@@ -38,7 +39,11 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "^19.1.0",
+    "patch-package": "^8.0.0",
     "typescript": "~5.3.3"
+  },
+  "overrides": {
+    "expo-asset": "~12.0.12"
   },
   "private": true
 }

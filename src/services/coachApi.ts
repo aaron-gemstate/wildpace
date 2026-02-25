@@ -5,7 +5,13 @@ const getBaseUrl = (): string => {
     typeof process !== 'undefined'
       ? (process.env.EXPO_PUBLIC_PLAN_API_URL || process.env.PLAN_API_URL)
       : '';
-  return url ? url.replace(/\/$/, '') : '';
+  let base = url ? url.replace(/\/$/, '') : '';
+  // When running in browser (web), same machine as backend — use localhost so connection works
+  if (typeof window !== 'undefined' && base && base !== 'http://localhost:3001' && !base.includes('localhost')) {
+    const host = window.location?.hostname || 'localhost';
+    base = `http://${host}:3001`;
+  }
+  return base;
 };
 
 export type CoachChatMessage = { role: 'user' | 'assistant'; content: string };
@@ -60,6 +66,8 @@ export type CoachChatResponse = {
   suggestedAction?: 'none' | 'confirm_plan_change';
   /** User explicitly confirmed in conversation; app may call adjustPlan after native confirm. */
   proceedPlanChange?: boolean;
+  /** Optional preset buttons (e.g. ["kg", "lbs"]) so user can tap instead of type. */
+  quickReplies?: string[];
 };
 
 export type CoachChatOptions = {
@@ -69,6 +77,20 @@ export type CoachChatOptions = {
   mode?: CoachMode;
   /** Required when mode is 'advisor'. */
   context?: AdvisorContext;
+  /** When set, backend should ask this first in intake (e.g. "Do you use lbs or kg?"). */
+  intakeAskFirst?: 'weight_unit';
+  /**
+   * User already chose unit in-app. Backend must:
+   * - Set preferences.weightUnit and continue intake.
+   * - If 'lbs': ask for weight in pounds and convert to kg server-side for storage; do not ask the user to convert.
+   * - If 'kg': ask for weight in kilograms as usual.
+   */
+  preferredWeightUnit?: 'kg' | 'lbs';
+  /**
+   * User says they're done. Backend should derive intake from the conversation and return
+   * intakeComplete: true and intake so the app can show the thank-you and trigger plan generation.
+   */
+  requestIntakeComplete?: boolean;
 };
 
 export async function coachChat(
@@ -89,16 +111,43 @@ export async function coachChat(
   if (mode === 'advisor' && options?.context) {
     body.context = options.context;
   }
-  const res = await fetch(`${baseUrl}/coach/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || `Coach chat failed: ${res.status}`);
+  if (mode === 'intake') {
+    body.intakeGuidelines =
+      'For gender, only use or offer the options: male, female. Do not refer to or use any other terms.';
+    if (messages.length === 0 && options?.intakeAskFirst) {
+      body.intakeAskFirst = options.intakeAskFirst;
+    }
+    if (options?.preferredWeightUnit) {
+      body.preferredWeightUnit = options.preferredWeightUnit;
+      if (options.preferredWeightUnit === 'lbs') {
+        body.intakeInstruction =
+          'User chose pounds. Ask for their weight in pounds; convert to kg yourself for storage. Do not ask the user to convert or offer conversion help.';
+      }
+    }
+    if (options?.requestIntakeComplete) {
+      body.requestIntakeComplete = true;
+    }
   }
-  return res.json();
+  try {
+    const res = await fetch(`${baseUrl}/coach/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `Coach chat failed: ${res.status}`);
+    }
+    return res.json();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (/network|failed to fetch|connection refused/i.test(msg)) {
+      throw new Error(
+        'Cannot reach the coach server. Check: (1) Backend is running (npm start in backend/). (2) On a phone, set EXPO_PUBLIC_PLAN_API_URL to your computer’s IP (e.g. http://192.168.x.x:3001) and use the same Wi‑Fi.'
+      );
+    }
+    throw e;
+  }
 }
 
 /** Build advisor context from current plan, logs, and check-ins (e.g. last 7–14 days). */
