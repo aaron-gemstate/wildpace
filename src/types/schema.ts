@@ -16,13 +16,15 @@ export const intakeSchema = z.object({
   age: z.number().min(13).max(120).optional(),
   weightKg: z.number().positive().optional(),
   heightCm: z.number().positive().optional(),
-  gender: z.enum(['male', 'female', 'non_binary', 'prefer_not']).optional(),
+  gender: z.enum(['male', 'female']).optional(),
   includeLifting: z.boolean().optional(),
   preferences: z.object({
     preferMorning: z.boolean().optional(),
     preferStrength: z.boolean().optional(),
     dietaryRestrictions: z.string().optional(),
     coachTone: coachToneSchema.optional(),
+    /** Weight/distance units; coach should ask this first. */
+    weightUnit: z.enum(['kg', 'lbs']).optional(),
   }).optional(),
   submittedAt: z.string(), // ISO
 });

@@ -14,11 +14,13 @@ import { LogDetailScreen } from '../screens/LogDetailScreen';
 import { RecoveryCheckinScreen } from '../screens/RecoveryCheckinScreen';
 import { EditIntakeScreen } from '../screens/EditIntakeScreen';
 import { CoachAdvisorScreen } from '../screens/CoachAdvisorScreen';
+import { GetStartedScreen } from '../screens/GetStartedScreen';
 import type { Intake } from '../types';
 
 export type RootStackParamList = {
   Welcome: undefined;
   Auth: undefined;
+  GetStarted: undefined;
   Intake: undefined;
   GeneratingPlan: undefined;
   MainTabs: undefined;
@@ -41,14 +43,14 @@ function LoadingScreen() {
 }
 
 export function RootNavigator() {
-  const { user, authReady, intake, plan, planGenerationLoading } = useApp();
+  const { user, authReady, intake, plan, planGenerationLoading, intakeSkipped } = useApp();
 
   if (!authReady) return <LoadingScreen />;
 
   const showAuthFlow = !user;
-  const showIntakeFlow = user && !intake && !planGenerationLoading && !plan;
+  const showGetStartedFlow = user && !intake && !plan && !planGenerationLoading && !intakeSkipped;
   const showGeneratingFlow = user && !!intake && planGenerationLoading;
-  const showMainFlow = user && !!intake && !!plan && !planGenerationLoading;
+  const showMainFlow = user && (!!plan || intakeSkipped) && !planGenerationLoading;
 
   if (showAuthFlow) {
     return (
@@ -66,7 +68,7 @@ export function RootNavigator() {
     );
   }
 
-  if (showIntakeFlow) {
+  if (showGetStartedFlow) {
     return (
       <Stack.Navigator
         screenOptions={{
@@ -75,6 +77,7 @@ export function RootNavigator() {
           contentStyle: { backgroundColor: colors.background },
         }}
       >
+        <Stack.Screen name="GetStarted" component={GetStartedScreen} options={{ title: "What's next?" }} />
         <Stack.Screen name="Intake" component={CoachIntakeScreen} options={{ title: 'Your coach' }} />
       </Stack.Navigator>
     );

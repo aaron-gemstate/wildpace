@@ -1,9 +1,8 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Text, Image, StyleSheet, Animated, Dimensions } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, Image, StyleSheet, Animated } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Footprints, Mountain } from 'lucide-react-native';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { GrainOverlay } from '../components/GrainOverlay';
 import { TopoBackground } from '../components/TopoBackground';
@@ -12,29 +11,39 @@ import type { RootStackParamList } from '../navigation/RootNavigator';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'Welcome'>;
 
-const SCROLL_TEXT = 'run > bike > swim > walk the distance ';
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CYCLING_WORDS = ['Run', 'Swim', 'Bike', 'Walk'] as const;
+const CYCLE_DURATION_MS = 2200;
 
-function ScrollingText() {
-  const translateX = useRef(new Animated.Value(0)).current;
+function CyclingHeadline() {
+  const [index, setIndex] = useState(0);
+  const opacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    const loop = () => {
-      translateX.setValue(0);
-      Animated.timing(translateX, {
-        toValue: -1 * (SCROLL_TEXT.length * 10),
-        duration: 8000,
+    const advance = () => {
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 280,
         useNativeDriver: true,
-      }).start(() => loop());
+      }).start(() => {
+        setIndex((i) => (i + 1) % CYCLING_WORDS.length);
+        opacity.setValue(0);
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 280,
+          useNativeDriver: true,
+        }).start();
+      });
     };
-    loop();
-  }, [translateX]);
+    const id = setInterval(advance, CYCLE_DURATION_MS);
+    return () => clearInterval(id);
+  }, [opacity]);
+
+  const word = CYCLING_WORDS[index];
 
   return (
-    <View style={styles.scrollWrap} pointerEvents="none">
-      <Animated.View style={[styles.scrollRow, { transform: [{ translateX }] }]}>
-        <Text style={styles.scrollText}>{SCROLL_TEXT.repeat(3)}</Text>
-      </Animated.View>
+    <View style={styles.cyclingWrap}>
+      <Animated.Text style={[styles.cyclingWord, { opacity }]}>{word}</Animated.Text>
+      <Text style={styles.cyclingStatic}> the distance</Text>
     </View>
   );
 }
@@ -46,13 +55,6 @@ export function WelcomeScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <GrainOverlay />
       <TopoBackground />
-      <View style={styles.hero}>
-        <View style={styles.heroBadge}>
-          <Mountain size={20} color={colors.accent} strokeWidth={2} />
-          <Footprints size={18} color={colors.accentLight} strokeWidth={2} style={{ marginLeft: spacing.xs }} />
-        </View>
-        <View style={styles.orangeBar} />
-      </View>
       <View style={styles.content}>
         <View style={styles.logoWrap}>
           <Image
@@ -63,7 +65,7 @@ export function WelcomeScreen() {
           />
         </View>
         <View style={styles.sublineWrap}>
-          <ScrollingText />
+          <CyclingHeadline />
           <Text style={styles.subline}>
             Your personal coach for achieving all of your endurance dreams.
           </Text>
@@ -83,22 +85,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  hero: {
-    paddingTop: spacing.xxl,
-    paddingHorizontal: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  orangeBar: {
-    width: 48,
-    height: 3,
-    backgroundColor: colors.accent,
-    marginTop: spacing.sm,
-    borderRadius: 2,
   },
   content: {
     flex: 1,
@@ -125,19 +111,24 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginBottom: spacing.xxl,
   },
-  scrollWrap: {
-    width: '100%',
-    overflow: 'hidden',
+  cyclingWrap: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: spacing.md,
   },
-  scrollRow: {
-    flexDirection: 'row',
-  },
-  scrollText: {
-    fontFamily: fontFamily.medium,
-    fontSize: typography.body.fontSize,
+  cyclingWord: {
+    fontFamily: fontFamily.h2,
+    fontSize: typography.display.fontSize,
+    lineHeight: typography.display.lineHeight,
     color: colors.accent,
-    letterSpacing: 0.5,
+  },
+  cyclingStatic: {
+    fontFamily: fontFamily.h2,
+    fontSize: typography.display.fontSize,
+    lineHeight: typography.display.lineHeight,
+    color: colors.textSecondary,
   },
   subline: {
     fontFamily: fontFamily.regular,

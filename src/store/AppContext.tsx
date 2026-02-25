@@ -16,6 +16,8 @@ type AppState = {
   checkins: RecoveryCheckin[];
   planGenerationLoading: boolean;
   planGenerationError: string | null;
+  /** User chose "Explore first" and hasn't completed intake yet. */
+  intakeSkipped: boolean;
 };
 
 type AppContextValue = AppState & {
@@ -31,6 +33,7 @@ type AppContextValue = AppState & {
   refreshFromStorage: () => Promise<void>;
   seedDemoData: () => Promise<void>;
   clearPlanError: () => void;
+  setIntakeSkipped: (skipped: boolean) => Promise<void>;
 };
 
 const defaultState: AppState = {
@@ -43,6 +46,7 @@ const defaultState: AppState = {
   checkins: [],
   planGenerationLoading: false,
   planGenerationError: null,
+  intakeSkipped: false,
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -52,11 +56,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const planEngine = createPlanEngine();
 
   const refreshFromStorage = useCallback(async () => {
-    const [intake, plan, logs, checkins] = await Promise.all([
+    const [intake, plan, logs, checkins, intakeSkipped] = await Promise.all([
       storage.getIntake(),
       storage.getPlan(),
       storage.getLogs(),
       storage.getCheckins(),
+      storage.getIntakeSkipped(),
     ]);
     setState((s) => ({
       ...s,
@@ -64,6 +69,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       plan,
       logs,
       checkins,
+      intakeSkipped,
     }));
   }, []);
 
@@ -148,12 +154,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     await auth.signOut();
-    setState((s) => ({ ...s, user: null }));
+    setState((s) => ({ ...s, user: null, intakeSkipped: false }));
   }, []);
 
   const setIntake = useCallback(async (intake: Intake | null) => {
     await storage.setIntake(intake);
-    setState((s) => ({ ...s, intake }));
+    if (intake) {
+      await storage.setIntakeSkipped(false);
+      setState((s) => ({ ...s, intake, intakeSkipped: false }));
+    } else {
+      setState((s) => ({ ...s, intake }));
+    }
     const user = auth.currentUser;
     if (user && intake) await firestore.setIntake(user.uid, intake).catch(() => {});
   }, []);
@@ -246,6 +257,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setState((s) => ({ ...s, planGenerationError: null }));
   }, []);
 
+  const setIntakeSkipped = useCallback(async (skipped: boolean) => {
+    await storage.setIntakeSkipped(skipped);
+    setState((s) => ({ ...s, intakeSkipped: skipped }));
+  }, []);
+
   const value: AppContextValue = {
     ...state,
     signIn,
@@ -260,6 +276,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     refreshFromStorage,
     seedDemoData,
     clearPlanError,
+    setIntakeSkipped,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

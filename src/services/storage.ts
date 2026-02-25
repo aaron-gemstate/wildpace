@@ -7,6 +7,7 @@ const KEYS = {
   plan: '@wildpace/plan',
   logs: '@wildpace/logs',
   checkins: '@wildpace/checkins',
+  intakeSkipped: '@wildpace/intakeSkipped',
 } as const;
 
 export const storage = {
@@ -72,6 +73,16 @@ export const storage = {
 
   async setCheckins(checkins: RecoveryCheckin[]): Promise<void> {
     await AsyncStorage.setItem(KEYS.checkins, JSON.stringify(checkins));
+  },
+
+  async getIntakeSkipped(): Promise<boolean> {
+    const raw = await AsyncStorage.getItem(KEYS.intakeSkipped);
+    return raw === 'true';
+  },
+
+  async setIntakeSkipped(skipped: boolean): Promise<void> {
+    if (skipped) await AsyncStorage.setItem(KEYS.intakeSkipped, 'true');
+    else await AsyncStorage.removeItem(KEYS.intakeSkipped);
   },
 
   async clearAll(): Promise<void> {

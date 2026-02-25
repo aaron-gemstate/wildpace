@@ -34,7 +34,7 @@ function getTodayLabel() {
 
 export function DashboardScreen() {
   const navigation = useNavigation<Nav>();
-  const { plan } = useApp();
+  const { plan, setIntakeSkipped } = useApp();
   const { weekday, short } = getTodayLabel();
 
   if (!plan) {
@@ -45,8 +45,13 @@ export function DashboardScreen() {
         </View>
         <Text style={styles.emptyTitle}>No plan yet</Text>
         <Text style={styles.emptySub}>
-          Complete intake and we’ll build your personalized training and nutrition plan.
+          Complete intake and we'll build your personalized training and nutrition plan.
         </Text>
+        <PrimaryButton
+          title="Set up my plan"
+          onPress={() => setIntakeSkipped(false)}
+          style={styles.emptyCta}
+        />
       </View>
     );
   }
@@ -182,7 +187,9 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     textAlign: 'center',
     maxWidth: 280,
+    marginBottom: spacing.lg,
   },
+  emptyCta: { marginTop: spacing.sm },
   card: { marginBottom: spacing.lg },
   cardTitleRow: {
     flexDirection: 'row',

@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import OpenAI from 'openai';
 import { intakeSchema, planSchema } from './schema.js';
+import { runCoachWorkflow } from './coach-workflow.js';
 
 const app = express();
 app.use(cors());
@@ -64,14 +65,26 @@ const submitIntakeTool = {
   },
 };
 
+const useAgentsWorkflow = process.env.USE_AGENTS_WORKFLOW === 'true' || !!process.env.OPENAI_WORKFLOW_ID;
+
 app.post('/coach/chat', async (req, res) => {
   if (!openai) {
     return res.status(503).json({ error: 'OpenAI not configured (OPENAI_API_KEY)' });
   }
-  const { messages = [], coachTone = 'supportive', existingIntake } = req.body;
-  const systemPrompt = buildSystemPrompt(coachTone, existingIntake || null);
+  const { messages = [], coachTone = 'supportive', existingIntake, requestIntakeComplete } = req.body;
 
   try {
+    if (useAgentsWorkflow && !requestIntakeComplete) {
+      const workflowResult = await runCoachWorkflow(messages, { coachTone, existingIntake });
+      return res.json({
+        message: workflowResult.message,
+        intakeComplete: workflowResult.intakeComplete ?? false,
+        intake: workflowResult.intake,
+        quickReplies: workflowResult.quickReplies,
+      });
+    }
+
+    const systemPrompt = buildSystemPrompt(coachTone, existingIntake || null);
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -213,7 +226,8 @@ app.post('/generatePlan', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`WildPace backend listening on http://localhost:${PORT}`);
+const HOST = process.env.HOST || '0.0.0.0';
+app.listen(PORT, HOST, () => {
+  console.log(`WildPace backend listening on http://localhost:${PORT} (and http://<your-ip>:${PORT} for devices)`);
   if (!openai) console.warn('OPENAI_API_KEY not set: /coach/chat and /generatePlan will return 503');
 });

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer } from '@react-navigation/native';
@@ -20,9 +20,10 @@ import { AppProvider } from './src/store/AppContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { colors } from './src/theme';
 
-SplashScreen.preventAutoHideAsync();
-
 export default function App() {
+  useEffect(() => {
+    SplashScreen.preventAutoHideAsync().catch(() => {});
+  }, []);
   const [fontsLoaded, fontError] = useFonts({
     BebasNeue_400Regular,
     Oswald_400Regular,
